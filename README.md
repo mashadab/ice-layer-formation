@@ -1,4 +1,4 @@
-# Gravity driven infiltration with the development of a saturated region
+# Ice layer formation
 ## Authors
 - Mohammad Afzal Shadab<sup>1,2,3</sup> (mashadab@utexas.edu)
 - Surendra Adhikari<sup>2</sup>
