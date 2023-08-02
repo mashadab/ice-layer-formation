@@ -25,7 +25,7 @@
 
 ### Dependences
 
-hyperbolic-infiltration-theory requires the following packages to function:
+The codes require the following packages to function:
 - [Python](https://www.python.org/) version 3.5+
 - [Numpy](http://www.numpy.org/) >= 1.16
 - [scipy](https://www.scipy.org/) >=1.5
@@ -33,5 +33,5 @@ hyperbolic-infiltration-theory requires the following packages to function:
 
 
 ### Quick Usage
-After cloning the repository and installing the required libraries, run the python files corresponding to the figure numbers as given in the paper. Codes can be run either directly or on an IDE such as Anaconda Spyder. `Solver` is the folder containing the auxiliaries.
-The codes are commented.
+After cloning the repository and installing the required libraries, run the Python files corresponding to the figure numbers as given in the paper. Codes can be run either directly or on an IDE such as Anaconda Spyder. `Solver` is the folder containing the auxiliaries.
+Comments are provided in the code.
