@@ -1,10 +1,10 @@
 # Gravity driven infiltration with the development of a saturated region
 ## Authors
-- Mohammad Afzal Shadab^{1,2,3} (mashadab@utexas.edu)
-- Surendra Adhikari^{2}
-- Anja Rutishauser^{4,5}
-- Cyril Grima^{3,4}
-- Marc Andre Hesse^{1,3,4} (mhesse@jsg.utexas.edu)
+- Mohammad Afzal Shadab<sup>1,2,3</sup> (mashadab@utexas.edu)
+- Surendra Adhikari<sup>2</sup>
+- Anja Rutishauser<sup>4,5</sup>
+- Cyril Grima<sup>3,4</sup>
+- Marc Andre Hesse<sup>1,3,4</sup> (mhesse@jsg.utexas.edu)
 
 ## Affiliation
 1 Oden Institute for Computational Engineering and Sciences, The University of Texas at Austin
