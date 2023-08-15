@@ -34,4 +34,4 @@ The codes require the following packages to function:
 
 ### Quick Usage
 After cloning the repository and installing the required libraries, run the Python files corresponding to the figure numbers as given in the paper. Codes can be run either directly or on an IDE such as Anaconda Spyder. `Solver` is the folder containing the auxiliaries.
-Comments are provided in the code.
+Comments are provided in the code. All codes to run are provided in Main folder. Output figures are located in the Figures folder.
