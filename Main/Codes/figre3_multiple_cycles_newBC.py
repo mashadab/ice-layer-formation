@@ -49,14 +49,14 @@ diffusion = 'yes'
 CFL    = 0.1     #CFL number
 tilt_angle = 0   #angle of the slope
 ncycles = 4           
-npp    = 6   #number of positive days [days]          
+npp    = 4   #number of positive days [days]          
 break_type = 'equal' #equal or unequal
 break_length = 5    #number of days for a break         
 lag    = 2*npp#npp #number of days to wait after preipitation has happened in the very end[days]
 pulse_type = 'sine'  #'sine' wave or 'square' wave  : sine needs equal break
 
 On_flux  =  45  #Flux on hot days [W/m^2]
-Off_flux = -20  #Flux on cold days [W/m^2]
+Off_flux = -45  #Flux on cold days [W/m^2]
 
 
 ##hydrology
@@ -125,6 +125,16 @@ t_interest = np.linspace(0,tmax,int(tf/day2s*24)+1)   #swr,sgr=0
 #tmax = tmax / phi_L**m   #time scaling with respect to K_0 where K_0 = f_c/phi**m
 Nt   = 1000
 dt = tmax / (Nt)
+
+#######
+#analytical solution 
+phi_i_init = (1-phi_nw_init)
+kbar = 2.22362*(rho_i/rho_w*(phi_i_init))**1.885; npp=4
+rhocp_bar = rho_i * cp_i * phi_i_init; alpha_bar = kbar / rhocp_bar; omega = 2*np.pi/(2*npp*day2s)
+
+T_analytical_sine = lambda z,t: T_firn + On_flux / kbar * np.sqrt(alpha_bar/(2 * omega)) * np.exp(-z * np.sqrt(omega/(2*alpha_bar))) * ( np.sin(omega*t - z*np.sqrt(omega/(2*alpha_bar))) - np.cos(omega*t - z*np.sqrt(omega/(2*alpha_bar))) )
+T_max    = T_firn + On_flux / kbar * np.sqrt(alpha_bar/(omega))
+
 
 #Non-dimensional permeability: Harmonic mean
 def f_Cm(phi,m):
@@ -1763,7 +1773,6 @@ ani.save(f"../Figures/{simulation_name}_combined_with_seconds.mov", writer='ffmp
 '''
 
 
-'''
 
 #combined 1D plot
 phi_sol = 1- phi_i_sol
@@ -1841,7 +1850,6 @@ plt.tight_layout(w_pad=0.5, h_pad=1.0)
 plt.subplots_adjust(wspace=0.0, hspace=0.0)
 plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_super_combined_withoutQ.pdf',bbox_inches='tight', dpi = 100)
 
-'''
 
 
 '''
