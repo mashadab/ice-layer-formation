@@ -1,8 +1,12 @@
-#Coding the Hyperbolic Richard's solver with CH thermodynamics
-#Multiple_layers
+######################################################################
+#Figure 2 - Single melting event
 #Mohammad Afzal Shadab
 #Date modified: 05/03/2022
+######################################################################
 
+######################################################################
+#import libraries
+######################################################################
 import sys
 sys.path.insert(1, '../../solver')
 
@@ -41,7 +45,9 @@ def f_Cn(C,phi,n):
     fC[C<=0]  = 0.0      
     return fC
 
+######################################################################
 #parameters
+######################################################################
 ##simulation
 simulation_name = f'Hyperbolic-thermo-DYE2-CH_phase_diagram_-10C_low_res_fancy_T_with_DIFFUSION'
 diffusion = 'yes'
@@ -78,8 +84,6 @@ Tm    = 273.16  # melting point temperature of ice [K]
 L_fusion= 333.55e3# latent heat of fusion of water [J / kg]
 
 #domain details
-#L  = 90 #length of the domain (m)
-#H  = 15 #height of the domain (m)
 z0 = 3.75 #characteristic height (m)
 
 fc = k0*k_w0*rho_w*grav/mu_w*phi_L**3 #Infiltration capacity (m/s)
@@ -91,11 +95,9 @@ Param.xleft_inj= 0e3;  Param.xright_inj= 1000e3
 
 #temporal
 tf     = 20*day2s
-tmax = tf#0.07#0.0621#2 #5.7#6.98  #time scaling with respect to fc
-#t_interest = [0,0.25,0.5399999999999999 + 0.005,0.6,0.7116505061468059,1.0] #swr,sgr=0.05
+tmax   = tf
 t_interest = np.linspace(0,tmax,int(tf/day2s*24)+1)   #swr,sgr=0
 
-#tmax = tmax / phi_L**m   #time scaling with respect to K_0 where K_0 = f_c/phi**m
 Nt   = 1000
 dt = tmax / (Nt)
 
@@ -112,13 +114,15 @@ def f_Cn(C,phi,n):
     fC[C<=0]  = 0.0      
     return fC
 
-#spatial
-Grid.xmin =  0*z0; Grid.xmax =1000e3; Grid.Nx = 2; 
-Grid.ymin =  0*z0; Grid.ymax =5;  Grid.Ny = 200;
-Grid = build_grid(Grid)
-[D,G,I] = build_ops(Grid)
+######################################################################
+#Defining grid and operators
+######################################################################
+Grid.xmin =  0*z0; Grid.xmax =1000e3; Grid.Nx = 2;   #Horizontal direction
+Grid.ymin =  0*z0; Grid.ymax =5;  Grid.Ny = 200;     #Vertically downward direction
+Grid = build_grid(Grid)  #building grid
+[D,G,I] = build_ops(Grid) #building divergence, gradient and identity operators
 D  = -np.transpose(G)
-Avg     = comp_mean_matrix(Grid)
+Avg = comp_mean_matrix(Grid)  #building mean operator
 
 [Xc,Yc] = np.meshgrid(Grid.xc,Grid.yc)                 #building the (x,y) matrix
 Xc_col  = np.reshape(np.transpose(Xc), (Grid.N,-1))    #building the single X vector
@@ -129,19 +133,15 @@ s_nwfunc   = lambda phi_w,phi_nw: phi_nw / (phi_w + phi_nw)
 #T_annual_func = lambda Tbot, Ttop, Yc_col, t0: Tbot + (Ttop - Tbot) * np.exp(-(Grid.ymax-Yc_col)*np.sqrt(np.pi/(t0*kk)) ) * np.sin(np.pi/2 - (Grid.ymax-Yc_col)*np.sqrt(np.pi/(t0*kk)) )
 T_annual_func_sigmoid = lambda Tbot, Ttop, Yc_col, Y0: Tbot + (Ttop - Tbot)/Y0*(Yc_col) #* 1/(1+np.exp(-(Grid.ymax-Yc_col)/Y0))
 
-#Initial conditions
-#phi_nw  = fit_porosity(Yc_col)#np.exp(-(Yc_col/(Grid.ymax-Grid.ymin))) #volume fraction of gas np.ones_like(Yc_col)# #*np.exp(-(Yc_col/(Grid.ymax-Grid.ymin)))
-phi_nw  = phi_nw_init*np.ones_like(Yc_col)#np.exp(-(Yc_col/(Grid.ymax-Grid.ymin))) #volume fraction of gas np.ones_like(Yc_col)# #*np.exp(-(Yc_col/(Grid.ymax-Grid.ymin)))
-
-phi_w   = np.zeros_like(phi_nw) #No water
-C       = rho_w * phi_w + (1 - phi_w - phi_nw) * rho_i
-#H       = enthalpyfromT(fit_temp(Yc_col)+Tm,Tm,rho_i,rho_w,0,cp_i,cp_w,0,phi_w,phi_nw,L_fusion)
-#H       = enthalpyfromT(T_firn*((Yc_col/Grid.ymax))+Tm,Tm,rho_i,rho_w,0,cp_i,cp_w,0,phi_w,phi_nw,L_fusion) #Linear
-#H       = enthalpyfromT(T_firn*np.ones_like(Yc_col)+Tm,Tm,rho_i,rho_w,0,cp_i,cp_w,0,phi_w,phi_nw,L_fusion) #Constant
-
+######################################################################
+##Initial conditions
+######################################################################
+phi_nw  = phi_nw_init*np.ones_like(Yc_col) #volume fraction of gas 
+phi_w   = np.zeros_like(phi_nw) #No water phase
+C       = rho_w * phi_w + (1 - phi_w - phi_nw) * rho_i #Composition
 T_dummy = T_annual_func_sigmoid (Tm,T_firn+Tm, Yc_col, 0.5)
 T_dummy[T_dummy<Tm+T_firn] = Tm+T_firn
-H       = enthalpyfromT(T_dummy,Tm,rho_i,rho_w,0,cp_i,cp_w,0,phi_w,phi_nw,L_fusion)  #Exponential, analytic
+H       = enthalpyfromT(T_dummy,Tm,rho_i,rho_w,0,cp_i,cp_w,0,phi_w,phi_nw,L_fusion)  #Enthalpy: Exponential, analytic
 
 
 phi_w,phi_i,T,dTdH = eval_phase_behaviorCwH(H,Tm,rho_i,rho_w,rho_nw,cp_i,cp_w,cp_nw,C,L_fusion)
@@ -152,7 +152,9 @@ fs_theta = 0.0*np.ones((Grid.N,1))                     #RHS of heat equation
 
 simulation_name = simulation_name+f'phi{phi_nw[0]}'+f'T{T_firn}'+f'npp{npp}'
 
+######################################################################
 #initializing arrays
+######################################################################
 s_w_sol = np.copy(s_w) #for water saturation
 H_sol   = np.copy(H)   #for enthalpy
 T_sol   = np.copy(T)   #for Temperature
@@ -167,8 +169,9 @@ phi_w_sol = phi_w.copy()
 dof_inj   = Grid.dof_ymin[  np.intersect1d(np.argwhere(Grid.xc>= Param.xleft_inj),np.argwhere(Grid.xc <= Param.xright_inj))]
 dof_f_inj = Grid.dof_f_ymin[np.intersect1d(np.argwhere(Grid.xc>= Param.xleft_inj),np.argwhere(Grid.xc <= Param.xright_inj))]
 
-##########
-
+######################################################################
+#Boundary conditions
+######################################################################
 #boundary condition for saturation equation
 BC.dof_dir   = dof_inj
 BC.dof_f_dir = dof_f_inj
@@ -177,8 +180,9 @@ BC.dof_f_neu = np.array([])
 BC.qb = np.array([])
 BC.C_g    = C[dof_inj-1] + rho_w*C_L*np.ones((len(dof_inj),1))
 [B,N,fn]  = build_bnd(BC, Grid, I)
-# Enthalpy equation (total)
 
+
+# Enthalpy equation (total)
 dof_fixedH = np.setdiff1d(Grid.dof_ymin,dof_inj)
 dof_f_fixedH = np.setdiff1d(Grid.dof_f_ymin,dof_f_inj)
 #Param.H.dof_dir = np.hstack([dof_fixedH,Grid.dof_ymax,Grid.dof_xmin[1:-1],Grid.dof_xmax[1:-1]])
@@ -191,19 +195,6 @@ Param.H.dof_f_dir = np.concatenate([dof_f_inj,Grid.dof_f_ymax])
 #Param.H.g  = np.zeros((len(dof_inj),1))#np.hstack([0*np.ones_like(Grid.dof_ymin),LWC_top*rho_w*L_fusion*np.ones_like(Grid.dof_ymin)])
 Param.H.g = np.vstack([rho_w*C_L*L_fusion*np.ones((Grid.Nx,1)),H[Grid.dof_ymax-1]])
 
-'''
-Param.H.dof_dir = dof_inj
-Param.H.dof_f_dir = dof_f_inj
-#Param.H.g  = np.zeros((len(dof_inj),1))#np.hstack([0*np.ones_like(Grid.dof_ymin),LWC_top*rho_w*L_fusion*np.ones_like(Grid.dof_ymin)])
-Param.H.g = rho_w*C_L*L_fusion*np.ones((Grid.Nx,1))
-'''
-
-'''
-Param.H.dof_dir = np.hstack([Grid.dof_ymin, Grid.dof_ymax])
-Param.H.dof_f_dir = np.hstack([Grid.dof_f_ymin, Grid.dof_f_ymax])
-Param.H.g  = np.hstack([C_L*rho_w*L_fusion*np.ones_like(Grid.dof_ymin), H[Grid.dof_ymax-1,0]])
-'''
-
 Param.H.dof_neu = np.array([])
 Param.H.dof_f_neu = np.array([])
 Param.H.qb = np.array([])
@@ -215,8 +206,9 @@ v = np.ones((Grid.Nf,1))
 
 i = 0
 
-#Grid,s_w,time,tf_new,time,t_interest,i,tf,t,s_w_sol,phi_w_sol,phi_w,phi_i_sol,phi_i,H_sol,H,T_sol,T,phi = spin_up_firn(file_name, Grid, tf_new, n, t_interest)
-
+######################################################################
+#Time loop starts
+######################################################################
 while time<tmax:
     if time >npp*day2s:
         #Param.H.g= np.zeros((Grid.Nx,1)) 
@@ -368,12 +360,16 @@ while time<tmax:
 t = np.array(t)
 
 
-#saving the tensors
+######################################################################
+#Saving the data
+######################################################################
 np.savez(f'{simulation_name}_C{C_L}_{Grid.Nx}by{Grid.Ny}_t{tmax}.npz', t=t,q_w_new_sol=q_w_new_sol,H_sol=H_sol,T_sol=T_sol,s_w_sol=s_w_sol,phi_w_sol =phi_w_sol,phi_i_sol =phi_i_sol,phi=phi,Xc=Xc,Yc=Yc,Xc_col=Xc_col,Yc_col=Yc_col,Grid_Nx=Grid.Nx,Grid_Ny=Grid.Ny,Grid_xc=Grid.xc,Grid_yc=Grid.yc,Grid_xf=Grid.xf,Grid_yf=Grid.yf)
 
 
 '''
+######################################################################
 #for loading data
+######################################################################
 data = np.load('fig1bd-with-diffusion.npz')
 t=data['t']
 phi_w_sol =data['phi_w_sol']
@@ -398,691 +394,9 @@ Grid.yf=data['Grid_yf']
 '''
 
 
-###############################################
-light_red  = [1.0,0.5,0.5]
-light_blue = [0.5,0.5,1.0]
-light_black= [0.5,0.5,0.5]
-
-low_phi_dof = np.union1d(np.intersect1d(np.argwhere(Xc_col >=0.5)[:,0],np.argwhere(Xc_col < 0.75 - (1-Yc_col)/3)), \
-                         np.intersect1d(np.argwhere(Xc_col < 0.5)[:,0],np.argwhere(Xc_col > 0.25 + (1-Yc_col)/3)))
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-plot = [plt.contourf(Xc, Yc, np.transpose(phi.reshape(Grid.Nx,Grid.Ny)),20,cmap="coolwarm",levels=20,vmin = 0, vmax = 1)]
-manager = plt.get_current_fig_manager()
-manager.window.showMaximized()
-plt.xlabel(r'$x$ [m]')
-plt.ylabel(r'$z$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-##plt.axis('scaled')
-mm = plt.cm.ScalarMappable(cmap=cm.coolwarm)
-mm.set_array(C)
-mm.set_clim(0., 1.)
-clb = plt.colorbar(mm, pad=0.1)
-clb.set_label(r'$\phi$', labelpad=1, y=1.075, rotation=0)
-plt.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0)
-plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_porosity.pdf',bbox_inches='tight', dpi = 600)
-
-
-
-
-'''
-#New Contour plot
-fps = 100000 # frame per sec
-#frn = endstop # frame number of the animation
-[N,frn] = np.shape(phi_w_sol) # frame number of the animation from the saved file
-t_hr    = t/hr2s 
-def update_plot(frame_number, zarray, plot,t,phi):
-    plt.clf()
-    plot[0] = plt.contourf(Xc/1e3, Yc, np.transpose((zarray[:,frame_number]).reshape(Grid.Nx,Grid.Ny)), cmap="Blues",vmin = 0, vmax = 1)
-    plt.title("t= %0.4f hours" % t[frame_number],loc = 'center', fontsize=18)
-    ##plt.axis('scaled')
-    #plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    #clb = fig.colorbar(plot[0], orientation='vertical',aspect=50, pad=-0.1)
-    plt.clim(np.min(phi_w_sol), np.max(phi_w_sol))
-    plt.ylabel(r'$z$ [m]')
-    plt.xlabel(r'$x$ [km]')    
-    
-    plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-    plt.ylim([Grid.ymax,Grid.ymin])
-    mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-    mm.set_array(phi_w_sol)
-    mm.set_clim(np.min(phi_w_sol), np.max(phi_w_sol))
-    clb = plt.colorbar(mm, pad=0.1)
-    clb.set_label(r'$\phi_w$', labelpad=-3,x=-3, y=1.13, rotation=0)
-    
-
-fig = plt.figure(figsize=(10,10) , dpi=100)
-plot = [plt.contourf(Xc/1e3, Yc, np.transpose((phi_w_sol[:,0]).reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin = 0, vmax = 1)]
-#manager = plt.get_current_fig_manager()
-#manager.window.showMaximized()
-#clb = fig.colorbar(plot[0], orientation='horizontal',aspect=50, pad=-0.1)
-#clb = fig.colorbar(plot[0], orientation='vertical',aspect=50, pad=-0.1)
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [km]')
-plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-plt.ylim([Grid.ymax,Grid.ymin])
-##plt.axis('scaled')
-
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(phi_w_sol)
-mm.set_clim(np.min(phi_w_sol), np.max(phi_w_sol))
-clb = plt.colorbar(mm, pad=0.1)
-clb.set_label(r'$\phi_w$', labelpad=-3,x=-3, y=1.13, rotation=0)
-plt.title("t= %0.4f hours" %(t_hr[-1]),loc = 'center', fontsize=18)
-#plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-ani = animation.FuncAnimation(fig, update_plot, frn, fargs=(phi_w_sol[:,:], plot[:],t_hr[:],1-phi_i_sol[:,:]), interval=1/fps)
-ani.save(f"../Figures/{simulation_name}_{C_L/phi_L}_{Grid.Nx}by{Grid.Ny}_tf{t[frn-1]}_S_wsingle.mov", writer='ffmpeg', fps=30)
-
-'''
-
-'''
-#New Contour plot
-fps = 100000 # frame per sec
-#frn = endstop # frame number of the animation
-[N,frn] = np.shape(phi_w_sol) # frame number of the animation from the saved file
-
-def update_plot(frame_number, zarray, plot,t):
-    zarray  = zarray/phi   
-    plot[0] = plt.contourf(Xc, Yc, np.transpose(zarray[:,frame_number].reshape(Grid.Nx,Grid.Ny)), cmap="Blues",vmin = -0.05, vmax = 1.05)
-    plt.title("t= %0.4f" % t[frame_number],loc = 'center')
-    #plt.axis('scaled')
-    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    #plt.clim(0,1)
-
-fig = plt.figure(figsize=(10,7.5) , dpi=100)
-Ind = C/phi
-plot = [plt.contourf(Xc, Yc, np.transpose(Ind.reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin = -0.05, vmax = 1.05)]
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-#plt.axis('scaled')
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(Ind)
-mm.set_clim(0., 1.)
-clb = plt.colorbar(mm, pad=0.0)
-#clb = fig.colorbar(plot[0], orientation='vertical',aspect=50, pad=0.0)
-clb.set_label(r'$s_w$')
-plt.title("t= %0.2f s" % t[-1],loc = 'center', fontsize=18)
-
-plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-ani = animation.FuncAnimation(fig, update_plot, frn, fargs=(phi_w_sol[:,:], plot[:],t[:]), interval=1/fps)
-ani.save(f"../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_tf{t[frn-1]}_S_w.mov", writer='ffmpeg', fps=30)
-
-#ani.save(fn+'.gif',writer='imagemagick',fps=fps)
-#cmd = 'magick convert %s.gif -fuzz 5%% -layers Optimize %s_r.gif'%(fn,fn)
-#subprocess.check_output(cmd)
-'''
-
-
-'''
-#New Contour plot combined new
-Grid.ymax = 2
-horizontal_units = 'km' #m or km
-fps = 100000 # frame per sec 
-t = np.array(t)
-#frn = endstop # frame number of the animation
-[N,frn] = np.shape(phi_w_sol) # frame number of the animation from the saved file
-t_day = t/day2s
-def update_plot(frame_number, phi_w_sol,phi_i_sol,T_sol, plot,t_day):
-    fig.suptitle("t= %0.2f days" % t_day[frame_number], fontsize=22)
-    plt.subplot(3,1,1)
-    if horizontal_units == 'km':
-        plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-        plot = [plt.contourf(Xc/1e3, Yc, np.transpose(phi_w_sol[:,frame_number].reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin=np.min(phi_w_sol),vmax=np.max(phi_w_sol),levels=100)]
-    else:
-        plt.xlim([Grid.xmin, Grid.xmax])    
-        plot = [plt.contourf(Xc, Yc, np.transpose(phi_w_sol[:,frame_number].reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin=np.min(phi_w_sol),vmax=np.max(phi_w_sol),levels=100)]
- 
-    plt.ylim([Grid.ymax,Grid.ymin])
-    ax1.set_ylabel(r'$z$ [m]')
-    
-    plt.subplot(3,1,2)
-    if horizontal_units == 'km':
-        plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-        plot1 = [plt.contourf(Xc/1e3, Yc, np.transpose((1-phi_i_sol[:,frame_number]).reshape(Grid.Nx,Grid.Ny)),cmap="Greys",vmin=np.min(1-phi_i_sol),vmax=np.max(1-phi_i_sol),levels=100)]
-    else:
-        plt.xlim([Grid.xmin, Grid.xmax])  
-        plot1 = [plt.contourf(Xc, Yc, np.transpose((1-phi_i_sol[:,frame_number]).reshape(Grid.Nx,Grid.Ny)),cmap="Greys",vmin=np.min(1-phi_i_sol),vmax=np.max(1-phi_i_sol),levels=100)]
-    
-    plt.ylim([Grid.ymax,Grid.ymin])
-    ax2.set_ylabel(r'$z$ [m]')
-    
-    plt.subplot(3,1,3)
-    if horizontal_units == 'km':
-        plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-        ax3.set_xlabel(r'$x$ [km]')
-        plot1 = [plt.contourf(Xc/1e3, Yc, np.transpose((T_sol[:,frame_number]-Tm).reshape(Grid.Nx,Grid.Ny)),cmap="Reds",vmin=np.min(T_sol)-Tm,vmax=np.max(T_sol)-Tm,levels=100)]
-    
-    else:
-        plt.xlim([Grid.xmin, Grid.xmax])  
-        plot1 = [plt.contourf(Xc, Yc, np.transpose((T_sol[:,frame_number]-Tm).reshape(Grid.Nx,Grid.Ny)),cmap="Reds",vmin=np.min(T_sol)-Tm,vmax=np.max(T_sol)-Tm,levels=100)]
-        ax3.set_xlabel(r'$x$ [m]')
-    plt.ylim([Grid.ymax,Grid.ymin])
-    ax3.set_ylabel(r'$z$ [m]')
-
-fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharex=True,figsize=(20,20))
-plt.subplot(3,1,1)
-ax1.set_ylabel(r'$z$')
-if horizontal_units == 'km':
-    plot = [plt.contourf(Xc/1e3, Yc, np.transpose(phi_w_sol[:,0].reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin=np.min(phi_w_sol),vmax=np.max(phi_w_sol),levels=100)]
-    plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-else:
-    plot = [plt.contourf(Xc, Yc, np.transpose(phi_w_sol[:,0].reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin=np.min(phi_w_sol),vmax=np.max(phi_w_sol),levels=100)]
-    plt.xlim([Grid.xmin, Grid.xmax]) 
-plt.ylim([Grid.ymax,Grid.ymin])
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(phi_w_sol)
-mm.set_clim(np.min(phi_w_sol), np.max(phi_w_sol))
-clb = plt.colorbar(mm, orientation='vertical',ax=[ax1],aspect=10,pad=0.01)
-clb.set_label(r'$\phi_w$')
-ax1.set_ylabel(r'$z$ [m]')
-
-plt.subplot(3,1,2)
-mm = plt.cm.ScalarMappable(cmap=cm.Greys)
-ax2.set_ylabel(r'$z$')
-mm.set_array(1-phi_i_sol)
-mm.set_clim(np.max(1-phi_i_sol),np.min(1-phi_i_sol))
-clb = plt.colorbar(mm, orientation='vertical',ax=[ax2],aspect=10,pad=0.01)
-if horizontal_units == 'km':
-    plot1 = [plt.contourf(Xc/1e3, Yc, np.transpose((1-phi_i_sol[:,0]).reshape(Grid.Nx,Grid.Ny)),cmap="Greys",vmin=np.min(1-phi_i_sol),vmax=np.max(1-phi_i_sol),levels=100)]
-    plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-else:
-    plot1 = [plt.contourf(Xc, Yc, np.transpose((1-phi_i_sol[:,0]).reshape(Grid.Nx,Grid.Ny)),cmap="Greys",vmin=np.min(1-phi_i_sol),vmax=np.max(1-phi_i_sol),levels=100)]
-    plt.xlim([Grid.xmin, Grid.xmax]) 
-plt.ylim([Grid.ymax,Grid.ymin])
-clb.set_label(r'$\varphi$')
-ax2.set_ylabel(r'$z$ [m]')
-
-plt.subplot(3,1,3)
-mm = plt.cm.ScalarMappable(cmap=cm.Reds)
-mm.set_array(T_sol-Tm)
-mm.set_clim(np.min(T_sol)-Tm, np.max(T_sol)-Tm)
-clb = plt.colorbar(mm, orientation='vertical',ax=[ax3],aspect=10,pad=0.01)
-clb.set_label(r'T $[^\circ C]$')
-if horizontal_units == 'km':
-    plot1 = [plt.contourf(Xc/1e3, Yc, np.transpose((T_sol[:,0]-Tm).reshape(Grid.Nx,Grid.Ny)),cmap="Reds",vmin=np.min(T_sol)-Tm,vmax=np.max(T_sol)-Tm,levels=100)]
-    plt.xlim([Grid.xmin/1e3, Grid.xmax/1e3])
-    ax3.set_xlabel(r'$x$ [km]')
-else:
-    plot1 = [plt.contourf(Xc, Yc, np.transpose((T_sol[:,0]-Tm).reshape(Grid.Nx,Grid.Ny)),cmap="Reds",vmin=np.min(T_sol)-Tm,vmax=np.max(T_sol)-Tm,levels=100)]
-    plt.xlim([Grid.xmin, Grid.xmax])  
-    ax3.set_xlabel(r'$x$ [m]')
-plt.ylim([Grid.ymax,Grid.ymin])
-
-ax3.set_ylabel(r'$z$ [m]')
-
-fig.suptitle("t= %0.2f days" % t_day[0], fontsize=22)
-
-#ani = animation.FuncAnimation(fig, update_plot, frn, fargs=(phi_w_sol[:,:],phi_i_sol[:,:],T_sol[:,:], plot[:0],t_day[:]), interval=1/fps)
-
-ii = int(tf/(2*day2s))
-ani = animation.FuncAnimation(fig, update_plot, frn, fargs=(phi_w_sol[:,::ii],phi_i_sol[:,::ii],T_sol[:,::ii], plot[::ii],t_day[::ii]), interval=1/fps)
-
-ani.save(f"../Figures/{simulation_name}_{C_L/phi_L}_{Grid.Nx}by{Grid.Ny}_tf{t[frn-1]}_new_S_w.mov", writer='ffmpeg', fps=30)
-
-#ani.save(fn+'.gif',writer='imagemagick',fps=fps)
-#cmd = 'magick convert %s.gif -fuzz 5%% -layers Optimize %s_r.gif'%(fn,fn)
-#subprocess.check_output(cmd)
-'''
-
-'''
-#New Contour plot combined with new mesh
-print('New Contour plot combined with new mesh')
-fps = 100000 # frame per sec
-#frn = endstop # frame number of the animation
-[N,frn] = np.shape(phi_w_sol) # frame number of the animation from the saved file
-
-[X_all,Y_all] = comp_face_coords(Grid.dof_f,Grid)
-[X_plate,Y_plate] = comp_face_coords(dof_f_plate_bnd,Grid)
-
-def update_plot(frame_number, zarray, plot,t):
-    plt.cla()
-    fig.suptitle("t= %0.4f" % t[frame_number], fontsize=22)
-    #plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    zarray  = zarray/phi 
-    ax1.set_label(r'$x$')
-    plt.subplot(1,2,1)
-    plot[0] = plt.contourf(Xc, Yc, np.transpose(zarray[:,frame_number].reshape(Grid.Nx,Grid.Ny)), cmap="Blues",vmin = -0.0005, vmax = 1.0005)
-    plt.ylim([Grid.ymax,Grid.ymin])
-    plt.subplot(1,2,2)
-    zarray[zarray<sat_threshold] = 0
-    zarray[zarray>=sat_threshold] = 1
-    #plot1[0] = plt.contourf(Xc, Yc, np.transpose(zarray[:,frame_number].reshape(Grid.Nx,Grid.Ny)), cmap="Greys",vmin = -0.0005, vmax = 1.0005)
-    ax2.set_label(r'$x$')
-    plt.ylim([Grid.ymax,Grid.ymin])
-    mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-    mm.set_array(Ind)
-    mm.set_clim(0., 1.)
-    #clb = plt.colorbar(mm, pad=0.05,orientation='horizontal',ax=[ax1,ax2],aspect=50)
-    #plt.clim(0,1)
-    ax1.set_aspect('auto')
-    ax2.set_aspect('auto')
-    ax1.axis('scaled')
-    ax2.axis('scaled')
-    ax1.set_xlim([Grid.xmin, Grid.xmax])
-    ax1.set_ylim([Grid.ymax,Grid.ymin])
-    ax2.set_xlim([Grid.xmin, Grid.xmax])
-    ax2.set_ylim([Grid.ymax,Grid.ymin])
-    ax1.set_xlabel(r'$x$')
-    ax2.set_xlabel(r'$x$')
-    ax2.set_ylabel(r'$z$')
-    bnd = np.ones_like(Grid.xc)
-    bnd[Grid.xc < 0.75] = 1 + 3*( Grid.xc[Grid.xc < 0.75] - 0.75 )
-    bnd[Grid.xc < 0.5]  = 1 + 3*(-Grid.xc[Grid.xc < 0.5 ] + 0.25 )
-    bnd[Grid.xc < 0.25] = 1
-    #ax1.plot(Grid.xc,bnd,'-',color=brown, linewidth=0.5)
-    #ax1.plot(Grid.xc,bnd,'-',color=brown, linewidth=0.5)
-    #ax2.plot(Grid.xc,bnd,'-',color=brown, linewidth=0.5)
-    ax1.plot(Xc_col[np.argwhere(zarray[:,frame_number]<0)][:,0],Yc_col[np.argwhere(zarray[:,frame_number]<0)][:,0],'ro-')
-    #print(np.shape(zarray[:,frame_number]), np.shape(phi[:,0]))
-    ax1.plot(Xc_col[np.argwhere(zarray[:,frame_number]>1)][:,0],Yc_col[np.argwhere(zarray[:,frame_number]>1)][:,0],'gX')  
-    ax2.plot(X_all,Y_all,'k-',linewidth=0.4)
-    
-    dof_inact= Grid.dof[zarray[:,frame_number] / (phi[:,0]*(1-s_gr)) >= sat_threshold] #saturated cells
-    if np.any(dof_inact):
-        dof_f_saturated = find_faces(dof_inact,D,Grid) 
-        dof_sat_faces = find_all_faces(dof_inact,D,Grid) 
-        [X_sat,Y_sat] = comp_face_coords(dof_sat_faces,Grid)
-        [X_bnd,Y_bnd] = comp_face_coords(dof_f_saturated,Grid)
-        
-        ax2.plot(X_sat,Y_sat,'r-',linewidth=0.4)
-        ax2.plot(X_bnd,Y_bnd,'r-',linewidth=2)
-        
-        ax1.plot(X_plate,Y_plate,'k-',linewidth=2)
-        ax2.plot(X_plate,Y_plate,'k-',linewidth=2)
-    
-
-fig, (ax1, ax2) = plt.subplots(1,2, figsize=(20,20)) 
-Ind = phi_w_sol[:,0]/phi[:,0]
-plt.subplot(1,2,1)
-plot = [plt.contourf(Xc, Yc, np.transpose(Ind.reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin = -0.0005, vmax = 1.0005)]
-ax1.set_ylabel(r'$z$')
-ax1.set_label(r'$x$')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-ax1.axis('scaled')
-
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(Ind)
-mm.set_clim(0., 1.)
-#clb = fig.colorbar(plot[0],orientation='horizontal', orientation='horizontal',aspect=50,pad=0.05)
-#clb.set_label(r'$s_w$')
-#plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-ax1.set_label(r'$x$')
-ax2.set_ylabel(r'$z$')
-plt.subplot(1,2,2)
-Ind = phi_w_sol[:,0]/phi[:,0]
-Ind[Ind<sat_threshold] = 0
-Ind[Ind>=sat_threshold] = 1.0
-plot1 = [plt.contourf(Xc, Yc, np.transpose(Ind.reshape(Grid.Nx,Grid.Ny)),cmap="Greys",vmin = -0.0005, vmax = 1.0005)]
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-ax1.axis('scaled')
-ax2.axis('scaled')
-ax1.set_xlabel(r'$x$')
-ax2.set_xlabel(r'$x$')
-clb = plt.colorbar(mm, orientation='horizontal',ax=[ax1,ax2],aspect=50,pad=0.13)
-clb.set_label(r'$s_w$')
-fig.suptitle("t= %0.2f s" % t[0], fontsize=22)
-#plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-ax1.set_aspect('auto')
-ax2.set_aspect('auto')
-ax1.axis('scaled')
-ax2.axis('scaled')
-bnd = np.ones_like(Grid.xc)
-bnd[Grid.xc < 0.75] = 1 + 3*( Grid.xc[Grid.xc < 0.75] - 0.75 )
-bnd[Grid.xc < 0.5]  = 1 + 3*(-Grid.xc[Grid.xc < 0.5 ] + 0.25 )
-bnd[Grid.xc < 0.25] = 1
-#ax1.plot(Grid.xc,bnd,'-',color=brown, linewidth=0.5)
-#ax2.plot(Grid.xc,bnd,'-',color=brown, linewidth=0.5)
-#ax1.plot(Xc_col[np.argwhere(phi_w_sol[:,0]<0)[:,0]],Yc_col[np.argwhere(phi_w_sol[:,0]<0)[:,0]],'ro-')
-#ax1.plot(Xc_col[np.argwhere(phi_w_sol[:,]>phi[:,0]),0][:,0],Yc_col[np.argwhere(phi_w_sol[:,0]>phi[:,0]),0][:,0],'gX') 
-ax2.plot(X_all,Y_all,'k-',linewidth=0.4)
-ax1.plot(X_plate,Y_plate,'k-',linewidth=2)
-ax2.plot(X_plate,Y_plate,'k-',linewidth=2)
-ani = animation.FuncAnimation(fig, update_plot, frn, fargs=(phi_w_sol[:,::10], plot[::10],t[::10]), interval=1/fps)
-
-ani.save(f"../Figures/{simulation_name}_{C_L/phi_L}_{Grid.Nx}by{Grid.Ny}_tf{t[frn-1]}_S_w_mesh.mov", writer='ffmpeg', fps=30)
-
-#ani.save(fn+'.gif',writer='imagemagick',fps=fps)
-#cmd = 'magick convert %s.gif -fuzz 5%% -layers Optimize %s_r.gif'%(fn,fn)
-#subprocess.check_output(cmd)
-'''
-
-dof_inact= Grid.dof[phi_w_sol[:,-1] / (phi[:,0]*(1-s_gr)) >= sat_threshold] #saturated cells
-dof_f_saturated = find_faces(dof_inact,D,Grid) 
-dof_sat_faces = find_all_faces(dof_inact,D,Grid) 
-[X_sat,Y_sat] = comp_face_coords(dof_sat_faces,Grid)
-[X_bnd,Y_bnd] = comp_face_coords(dof_f_saturated,Grid)
-[X_all,Y_all] = comp_face_coords(Grid.dof_f,Grid)
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-plot = [plt.contourf(Xc, Yc, np.transpose((C/phi).reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin = -0.00001, vmax = 1.00001)]
-plt.plot(X_sat,Y_sat,'r-',linewidth=0.4)
-plt.plot(X_bnd,Y_bnd,'r-',linewidth=2)
-plt.plot(X_all,Y_all,'k-',linewidth=0.4)
-
-plt.colorbar()
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-#plt.axis('scaled')
-plt.plot(Xc_col[np.argwhere(phi_w_sol[:,-1]<0)[:,0]],Yc_col[np.argwhere(phi_w_sol[:,-1]<0)[:,0]],'ro',label='Sw>1')
-plt.plot(Xc_col[np.argwhere(phi_w_sol[:,-1]>(phi[:,0]+1e-9))[:,0]],Yc_col[np.argwhere(phi_w_sol[:,-1]>(phi[:,0]+1e-9))[:,0]],'gX',label='Sw>1')
-plt.savefig(f'../Figures/{simulation_name}_Marcs_way_Sw.pdf',bbox_inches='tight', dpi = 600)
-
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-plot = [plt.contourf(Xc, Yc, np.transpose((phi_w/(1-phi_i)).reshape(Grid.Nx,Grid.Ny)),cmap="Blues",vmin = -0.00001, vmax = 1.00001)]
-#plt.plot(X_plate,Y_plate,'k-',linewidth=2)
-plt.colorbar()
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax, Grid.ymin])
-#plt.axis('scaled')
-plt.savefig(f'../Figures/{simulation_name}_Marcs_way_Sw_withoutmesh.pdf',bbox_inches='tight', dpi = 600)
-
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-phi_copy = phi.copy()
-plot = [plt.contourf(Xc, Yc, np.transpose(phi_copy.reshape(Grid.Nx,Grid.Ny)),cmap="Greys",vmin = np.min(phi_copy), vmax = np.max(phi_copy),levels=1000)]
-plt.colorbar()
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax, Grid.ymin])
-#plt.axis('scaled')
-plt.savefig(f'../Figures/{simulation_name}_Marcs_way_porosity.pdf',bbox_inches='tight', dpi = 600)
-
-[Xc_flux,Yf_flux] = np.meshgrid(Grid.xc,Grid.yf)     #building the (x,y) matrix
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-plot = [plt.contourf(Xc_flux, Yf_flux, np.transpose(flux_vert[Grid.Nfx:Grid.Nf,-1].reshape(Grid.Nx,Grid.Ny+1)),cmap="Blues",vmin = -0.05, vmax = 1.05)]
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-plt.colorbar()
-#plt.axis('scaled')
-plt.plot(Xc_col[np.argwhere(phi_w_sol[:,-1]<0)[:,0]],Yc_col[np.argwhere(phi_w_sol[:,-1]<0)[:,0]],'ro')
-plt.savefig(f'../Figures/{simulation_name}_Marcs_way_verticalflux.pdf',bbox_inches='tight', dpi = 600)
-
-[Xf_flux,Yc_flux] = np.meshgrid(Grid.xf,Grid.yc)     #building the (x,y) matrix
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-plot = [plt.contourf(Xf_flux, Yc_flux, np.transpose(flux_vert[0:Grid.Nfx,-1].reshape(Grid.Nx+1,Grid.Ny)),cmap="Blues",vmin = -1, vmax = 1)]
-plt.ylabel(r'$z$ [m]')
-plt.xlabel(r'$x$ [m]')
-plt.xlim([Grid.xmin, Grid.xmax])
-plt.ylim([Grid.ymax,Grid.ymin])
-plt.colorbar()
-#plt.axis('scaled')
-plt.plot(Xc_col[np.argwhere(phi_w_sol[:,-1]<0)[:,0]],Yc_col[np.argwhere(phi_w_sol[:,-1]<0)[:,0]],'ro')
-plt.savefig(f'../Figures/{simulation_name}_Marcs_way_horizontalflux.pdf',bbox_inches='tight', dpi = 600)
-
-
-#Neww plot sidebysidesnapshot
-phi_w_sol_backup = phi_w_sol.copy()
-
-#phi_w_sol_backup[phi_w_sol_backup>LWC_top] = np.nan
-t = np.array(t)
-tday = t/day2s
-depth_array=np.kron(np.ones(len(tday)),np.transpose([Grid.yc]))
-t_array=np.kron(tday,np.ones((Grid.Ny,1)))
-phi_w_array = phi_w_sol_backup[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-
-fig = plt.figure(figsize=(15,7.5) , dpi=100)
-plot = [plt.contourf(t_array, depth_array, phi_w_array,cmap="Blues",levels=100)]
-shock     = np.genfromtxt('./Colliander_data/Shock.csv', delimiter=',')
-#plt.plot(shock[:-4,0],shock[:-4,1],'ro',label='Shock, Colliander et al. (2022)',markersize=10)
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(phi_w_sol_backup)
-#mm.set_clim(0, LWC_top)
-clb = plt.colorbar(mm, orientation='vertical',aspect=50,pad=0.13)
-clb.set_label(r'$LWC$', labelpad=-40, y=1.1, rotation=0)
-plt.xlabel(r'$t$ [days]')
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-#plt.clim(0.000000, 1.0000000)
-plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_combined.pdf',bbox_inches='tight', dpi = 600)
-
-
-'''
-#combined
-Grid.ymax = 2
-fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharex=True,figsize=(15,15))
-#Neww plot sidebysidesnapshot
-phi_w_sol_backup = phi_w_sol.copy()
-tday = t/day2s
-depth_array=np.kron(np.ones(len(tday)),np.transpose([Grid.yc]))
-t_array=np.kron(tday,np.ones((Grid.Ny,1)))
-phi_w_array = phi_w_sol_backup[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-phi_i_array = phi_i_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-
-plt.subplot(3,1,1)
-plt.plot(day,Qnet,'ro',label='Data',markersize=10)
-fit_time = np.linspace(tday[0],tday[-1],1000)
-plt.plot(fit_time,Qnet_func(fit_time),'k-',label='Fit',markersize=10)
-plt.plot(fit_time,1.1*Qnet_func(fit_time),'b--',label='Ends',markersize=10)
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(phi_w_sol_backup)
-plt.ylim([1.1*np.min(Qnet_func(fit_time)),1.1*np.max(Qnet_func(fit_time))])
-clb = plt.colorbar(mm, orientation='vertical',aspect=50,pad=0.05)
-clb.set_label(r'$LWC$', labelpad=-40, y=1.1, rotation=0)
-plt.ylabel(r'Q$_{net}$ [W/m$^2$]')
-
-
-plt.subplot(3,1,2)
-plot = [plt.contourf(t_array, depth_array, phi_w_array,cmap="Blues",levels=100)]
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(phi_w_sol_backup)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'$LWC$', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-
-plt.subplot(3,1,3)
-T_array = T_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-plot = [plt.contourf(t_array, depth_array, T_array-Tm,cmap="Reds",levels=100)]
-mm = plt.cm.ScalarMappable(cmap=cm.Reds)
-mm.set_array(T_sol-Tm)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'T[$^\circ$C]', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-plt.xlabel(r'Time [days]')
-
-plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-plt.subplots_adjust(wspace=0.3, hspace=0.3)
-plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_super_combined.pdf',bbox_inches='tight', dpi = 600)
-
-'''
-
-
-
-
-#combined
-Grid.ymax = 3
-from matplotlib import rcParams
-rcParams.update({'font.size': 22})
-fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharey=True, sharex=True,figsize=(15,15))
-#Neww plot sidebysidesnapshot
-phi_w_sol_backup = phi_w_sol.copy()
-tday = t/day2s
-depth_array=np.kron(np.ones(len(tday)),np.transpose([Grid.yc]))
-t_array=np.kron(tday,np.ones((Grid.Ny,1)))
-phi_w_array = phi_w_sol_backup[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-phi_i_array = phi_i_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-
-plt.subplot(3,1,1)
-plot = [plt.contourf(t_array, depth_array, (1-phi_i_array),cmap="Greys",levels=100)]
-mm = plt.cm.ScalarMappable(cmap=cm.Greys)
-mm.set_array(np.linspace(0.28882281204111515,0.5,1000))
-#mm.set_array(1-phi_i_sol)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'$\phi$', labelpad=-40, y=1.18, rotation=0)
-
-plt.subplot(3,1,2)
-plot = [plt.contourf(t_array, depth_array, phi_w_array,cmap="Blues",levels=100)]
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(np.linspace(0.0,0.030341777509989266,1000))
-#mm.set_array(phi_w_sol_backup)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'$LWC$', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-
-plt.subplot(3,1,3)
-T_array = T_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-plot = [plt.contourf(t_array, depth_array, T_array-Tm,cmap="Reds",levels=100)]
-mm = plt.cm.ScalarMappable(cmap=cm.Reds)
-mm.set_array(np.linspace(-10,0,1000))
-#mm.set_array(T_sol-Tm)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'T[$^\circ$C]', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-plt.xlabel(r'Time [days]')
-
-plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-plt.subplots_adjust(wspace=0.3, hspace=0.3)
-plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_super_combined_withoutQ.pdf',bbox_inches='tight', dpi = 600)
-
-
-
-#combined 1D plot
-
-from matplotlib import rcParams
-rcParams.update({'font.size': 22})
-Grid.ymax = 3
-fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharey=True, sharex=True,figsize=(15,15),dpi=100)
-#Neww plot sidebysidesnapshot
-phi_w_sol_backup = phi_w_sol.copy()
-tday = t/day2s
-depth_array=np.kron(np.ones(len(tday)),np.transpose([Grid.yc]))
-t_array=np.kron(tday,np.ones((Grid.Ny,1)))
-phi_w_array = phi_w_sol_backup[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-phi_i_array = phi_i_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-
-plt.subplot(3,1,1)
-plot = [plt.contourf(t_array, depth_array, (1-phi_i_array),cmap="Greys",levels=100,vmin=0.28882281204111515,vmax=0.5,ls=None)]
-mm = plt.cm.ScalarMappable(cmap=cm.Greys)
-mm.set_array(np.linspace(0.28882281204111515,0.5,10000))
-#mm.set_array(1-phi_i_sol)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'$\phi$', labelpad=-40, y=1.18, rotation=0)
-
-plt.subplot(3,1,2)
-plot = [plt.contourf(t_array, depth_array, phi_w_array,cmap="Blues",levels=100,vmin=0.0,vmax=0.030341777509989266,ls=None)]
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(np.linspace(0.0,0.030341777509989266,10000))
-#mm.set_array(phi_w_sol_backup)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'$LWC$', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-
-plt.subplot(3,1,3)
-T_array = T_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-plot = [plt.contourf(t_array, depth_array, T_array-Tm,cmap="Reds",levels=100,vmin=-10,vmax=0,ls=None)]
-mm = plt.cm.ScalarMappable(cmap=cm.Reds)
-mm.set_array(np.linspace(-10,0,10000))
-#mm.set_array(T_sol-Tm)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'T[$^\circ$C]', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-plt.xlabel(r'Time [days]')
-
-plt.subplots_adjust(wspace=0.3, hspace=0.3)
-plt.tight_layout(w_pad=0.5, h_pad=0.0)
-plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_super_combined_withoutQ.pdf',bbox_inches='tight', dpi = 600)
-
-
-
-#combined 1D plot
-
-from matplotlib import rcParams
-rcParams.update({'font.size': 22})
-Grid.ymax = 3
-fig, (ax1, ax2) = plt.subplots(2,1, sharey=True, sharex=True,figsize=(15,15),dpi=100)
-#Neww plot sidebysidesnapshot
-phi_w_sol_backup = phi_w_sol.copy()
-tday = t/day2s
-depth_array=np.kron(np.ones(len(tday)),np.transpose([Grid.yc]))
-t_array=np.kron(tday,np.ones((Grid.Ny,1)))
-phi_w_array = phi_w_sol_backup[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-phi_i_array = phi_i_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-
-plt.subplot(2,1,1)
-plot = [plt.contourf(t_array, depth_array, (1-phi_i_array),cmap="Greys",levels=100,vmin=0.28882281204111515,vmax=0.5,ls=None)]
-mm = plt.cm.ScalarMappable(cmap=cm.Greys)
-mm.set_array(np.linspace(0.28882281204111515,0.5,10000))
-#mm.set_array(1-phi_i_sol)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-clb.set_label(r'$\phi$', labelpad=-40, y=1.18, rotation=0)
-
-plt.subplot(2,1,2)
-T_array = T_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-phi_w_array[phi_w_array <= 0 ] = np.nan
-plot = [plt.contourf(t_array, depth_array, phi_w_array,cmap="Blues",levels=100,vmin=0.0,vmax=0.030341777509989266,ls=None)]
-mm = plt.cm.ScalarMappable(cmap=cm.Blues)
-mm.set_array(np.linspace(0.0,0.030341777509989266,10000))
-#mm.set_array(phi_w_sol_backup)
-plt.ylabel(r'Depth [m]')
-plt.xlim([tday[0],tday[-1]])
-plt.ylim([Grid.ymax,Grid.ymin])
-clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-#clb.set_label(r'$LWC$', labelpad=-40, y=1.18, rotation=0)
-#plt.clim(0.000000, 1.0000000)
-
-T_array = T_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
-T_array[T_array >= Tm] = np.nan
-plot = [plt.contourf(t_array, depth_array, T_array-Tm,cmap="Reds",levels=100,vmin=-10,vmax=0,ls=None)]
-mm = plt.cm.ScalarMappable(cmap=cm.Reds)
-mm.set_array(np.linspace(-10,0,10000))
-
-
-
-#clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-#clb.set_label(r'T[$^\circ$C]', labelpad=-40, y=1.18, rotation=0)
-
-#plt.clim(0.000000, 1.0000000)
-plt.xlabel(r'Time [days]')
-
-plt.tight_layout(w_pad=0.5, h_pad=1.0)
-plt.subplots_adjust(wspace=0.0, hspace=0.0)
-plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_super_combined_withoutQ_LWCplusT.pdf',bbox_inches='tight', dpi = 600)
-
-
-
+######################################################################
+#Plotting
+######################################################################
 #combined 1D plot with Sw
 Grid.ymax = 3
 fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharey=True, sharex=True,figsize=(15,15),dpi=100)
