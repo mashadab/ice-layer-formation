@@ -52,7 +52,7 @@ def f_Cn(C,phi,n):
 ######################################################################
 ##simulation
 
-simulation_name = f'sym_figure_4Cycles_45Wto-45WCold_sine'   #left: 25Wto-40W
+simulation_name = f'paper_original_net_zero'   #left: 25Wto-40W
 diffusion = 'yes'
 CFL    = 0.1     #CFL number
 tilt_angle = 0   #angle of the slope
@@ -428,7 +428,7 @@ np.savez(f'{simulation_name}_C{C_L}_{Grid.Nx}by{Grid.Ny}_t{tmax}.npz', t=t,q_w_n
 ######################################################################
 #for loading data
 ######################################################################
-data = np.load('sym_figure_4Cycles_45Wto-45WCold_sineT-10CLWC0.03npp4phi[0.5]T-10npp4cycles4lag8daysbreakequallength5_C0.03_2by200_t3456000.npz')
+data = np.load('paper_original_net_zeroT-10CLWC0.03npp4phi[0.5]T-10npp4cycles4lag8daysbreakequallength5_C0.03_2by200_t3456000.npz')
 t=data['t']
 phi_w_sol =data['phi_w_sol']
 phi_i_sol =data['phi_i_sol']
@@ -474,9 +474,9 @@ depth_array=np.kron(np.ones(len(tday)),np.transpose([Grid.yc]))
 
 ######
 #Remove 99% melted ice
-phi_w_sol_backup[phi_sol>1-non_porous_vol_frac] = np.nan
-phi_i_sol[phi_sol>1- non_porous_vol_frac] = np.nan
-T_sol[phi_sol>1-non_porous_vol_frac] = np.nan
+phi_w_sol_backup[phi_i_sol<non_porous_vol_frac] = np.nan
+phi_i_sol[phi_i_sol< non_porous_vol_frac] = np.nan
+T_sol[phi_i_sol<non_porous_vol_frac] = np.nan
 
 #####
 
@@ -538,7 +538,9 @@ plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_
 
 
 black_array= np.array([[0,0,0], [43,43,43], [85,85,85], [128,128,128] , [170,170,170], [213,213,213]])/255; 
-Grid.ymax = 3.0#4.5
+Grid.ymax = 5
+from matplotlib import rcParams
+rcParams.update({'font.size': 22})
 fig = plt.figure(figsize=(5,15) , dpi=100)
 plt.plot(1-phi_i_sol[0:Grid.Ny,np.argwhere(t/day2s == 0)[0][0]],Grid.yc,'k-',label=f'{0*npp} days',color = black_array[5,:])
 plt.plot(1-phi_i_sol[0:Grid.Ny,np.argwhere(t/day2s == 2*npp)[0][0]],Grid.yc,'k-',label=f'{2*npp} days',color = black_array[4,:])
@@ -548,12 +550,12 @@ plt.plot(1-phi_i_sol[0:Grid.Ny,np.argwhere(t/day2s == 8*npp)[0][0]],Grid.yc,'k-'
 plt.plot(1-phi_i_sol[0:Grid.Ny,np.argwhere(t == tf)[0][0]],Grid.yc,'k-',label=f'{10*npp} days',color = black_array[0,:])
 plt.ylabel(r'$z$ [m]')
 plt.xlabel(r'$\phi$')
-plt.legend(loc='lower right',frameon=False)
+#plt.legend(loc='lower right',frameon=False)
 plt.xlim([0.2, 1])
 plt.ylim([Grid.ymax,Grid.ymin])
 plt.tight_layout()
 plt.xticks([0.2,0.6,1.0])
-plt.savefig(f'../Figures/{simulation_name}_combined_phi.pdf',bbox_inches='tight', dpi = 600)
+plt.savefig(f'./combined_phi.pdf',bbox_inches='tight', dpi = 600)
 
 
 '''
@@ -572,10 +574,10 @@ fps = 100000 # frame per sec
 
 ######
 #Remove 99% melted ice
-phi_w_sol_backup[phi_sol>1-non_porous_vol_frac] = np.nan
-phi_w_sol[phi_sol>1-non_porous_vol_frac] = np.nan
-phi_i_sol[phi_sol>1- non_porous_vol_frac] = np.nan
-T_sol[phi_sol>1-non_porous_vol_frac] = np.nan
+phi_w_sol_backup[phi_i_sol<non_porous_vol_frac] = np.nan
+phi_w_sol[phi_i_sol<non_porous_vol_frac] = np.nan
+phi_i_sol[phi_i_sol< non_porous_vol_frac] = np.nan
+T_sol[phi_i_sol<non_porous_vol_frac] = np.nan
 T_sol[np.isnan(phi_i_sol)] = np.nan
 phi_w_sol_backup[np.isnan(phi_i_sol)] = np.nan
 phi_w_sol[np.isnan(phi_i_sol)] = np.nan
@@ -657,9 +659,9 @@ def animate(i,u_sol,Sw_sol,phi_w_sol,phi_i_sol,Yc,Yf,time):
     line[3].set_data(y, x)
     line[4].set_data( zz0, x)
     if np.any(np.isnan(phi_w_sol[:,i])): 
-        ax1.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
-        ax2.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
-        ax3.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
+        ax1.axhline(y=np.max(Yc_col[np.isnan(phi_i_sol[:,i])]), c=blue,linestyle='-',lw=3)
+        ax2.axhline(y=np.max(Yc_col[np.isnan(phi_i_sol[:,i])]), c=blue,linestyle='-',lw=3)
+        ax3.axhline(y=np.max(Yc_col[np.isnan(phi_i_sol[:,i])]), c=blue,linestyle='-',lw=3)
     else:
         ax1.axhline(y=0, c=blue,linestyle='-',lw=3) 
         ax2.axhline(y=0, c=blue,linestyle='-',lw=3)
