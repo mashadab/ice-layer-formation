@@ -34,9 +34,9 @@ The codes require the following packages to function:
 
 Tested on
 - [Python](https://www.python.org/) version 3.9.14
-- [Numpy](http://www.numpy.org/) >= 1.25.2
-- [scipy](https://www.scipy.org/) >=1.11.2
-- [matplotlib](https://matplotlib.org/) >=3.7.2
+- [Numpy](http://www.numpy.org/) version 1.25.2
+- [scipy](https://www.scipy.org/) version 1.11.2
+- [matplotlib](https://matplotlib.org/) version 3.7.2
 
 
 ### Quick Usage
