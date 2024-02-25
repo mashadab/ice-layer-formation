@@ -50,3 +50,9 @@ Figure 2: (a to d) figure2atod_singlecase.py   <Approx runtime: 5 mins >
 Figure 3: figre3_multiple_cycles_newBC.py  <Approx runtime: 10 mins >
 
 Figure 4 (complete figure, requires field data from within the folder): figure4_composition_new_with_crater_surface_tracking.py <Approx runtime: 20 mins >
+
+
+<p align="center">
+<img src="./Main/Figures/validation_figure.pdf" height="370">
+</p>
+Figure : Infiltration into a multilayered firn with porosity and temperature decay with depth: (a) Schematic diagram showing all of the layers. The showing evolution of the firn (b) porosity φ, (c) liquid water content LWC or volume fraction of water and (d) temperature T evaluated by the numerical simulation in absence of heat diffusion. Here all dashed lines show analytic solutions computed from the unified kinematic wave theory proposed by Shadab et al., Arxiv (2024). The thin, grey dashed lines show theoretically calculated dimensionless times of saturation and ponding. The theoretical evolutions of the initial wetting front is shown with red dashed line  and the dynamics of saturated region after wetting front reaches z = 5 m is shown by blue and green dashed lines.
