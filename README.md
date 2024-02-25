@@ -58,6 +58,6 @@ Figure 4 (complete figure, requires field data from within the folder): figure4_
 Figure : Infiltration into a multilayered firn with porosity and temperature decay with depth: (a) Schematic diagram showing all of the layers. The resulting evolution of firn (b) porosity φ, (c) liquid water content LWC or volume fraction of water and (d) temperature T evaluated by the numerical simulation in the absence of heat diffusion. Here all dashed lines show analytic solutions computed from the unified kinematic wave theory proposed by Shadab et al., Arxiv (2024) [1]. The thin, grey dashed lines show theoretically calculated dimensionless times of saturation and ponding. The theoretical evolutions of the initial wetting front is shown with red dashed line  and the dynamics of saturated region after wetting front reaches z = 5 m is shown by blue and green dashed lines.
 
 
-References:
+## References:
 1. Shadab, M.A., Rutishauser, A., Grima, C. and Hesse, M.A., 2024. A Unified Kinematic Wave Theory for Melt Infiltration into Firn. ArXiv. 
 2. Shadab, M.A., Rutishauser, A., Grima, C. and Hesse, M.A., 2023. A Unified Kinematic Wave Theory for Melt Infiltration into Firn. AGU23.
