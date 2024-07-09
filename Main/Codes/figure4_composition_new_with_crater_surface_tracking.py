@@ -32,6 +32,7 @@ fit_porosity = RetMIP_fit_porosity
 from colliander_data_analysis import spun_up_profile_May2016_Colliander, Qnet_May2Sept2016_Samira
 day,Qnet,Qnet_func             = Qnet_May2Sept2016_Samira() #Samira
 
+from scipy import integrate
 
 #for 2D
 from build_gridfun2D import build_grid
@@ -369,17 +370,20 @@ while time<tmax:
     
     #adding accumulation
     if (RetMIP_acc_rate(time/day2s) > 0) and (surf_loc > 0):  #if accumulation > 0 and surface is below top
-        length_added = RetMIP_acc_rate(time/day2s) * dt * rho_w /315 #'meter' ice equivalent of solid ice accumulation
+        #length_added = RetMIP_acc_rate(time/day2s) * dt * rho_w /315 #'meter' ice equivalent of solid ice accumulation
+        #length_added = RetMIP_acc_rate(time/day2s) * dt * rho_w /315 #'meter' ice equivalent of solid ice accumulation
+        length_added = integrate.qmc_quad(RetMIP_acc_rate, (time-dt)/day2s, (time)/day2s)[0] * day2s * rho_w /315 #'meter' ice equivalent of solid ice accumulation #dt is involved
+        
         
         if length_added_final < Grid.dy:  #insufficient to fill one cell
             length_added_final = length_added_final + length_added 
                 
         else: #sufficient to fill one cell atleast
             if  length_added_final == 0:   length_added_final =  length_added 
-            
+
+            surf_loc = surf_loc - length_added_final     #new surface location [m]        
             dof_fresh = dof_complete_melt[np.ravel(Yc_col[dof_complete_melt-1] > surf_loc)] #cells of freshly fallen snow
-            
-            surf_loc = surf_loc - length_added_final
+            if np.any(dof_fresh): print(dof_fresh)
             H[dof_fresh-1] = 0.0   #adding temperate ice on top
             C[dof_fresh-1] = 315   #adding temperate, freshly fallen snow on top [kg/m3]
             phi_i[dof_fresh-1]   = 315/rho_i
@@ -441,6 +445,7 @@ Grid.xf=data['Grid_xf']
 Grid.yf=data['Grid_yf']
 [dummy,endstop] = np.shape(phi_w_sol)
 #C[:,0] = phi_w_sol[:,-1]
+phi_sol = 1- phi_i_sol
 '''
 
 ######################################################################
@@ -457,16 +462,21 @@ from datetime import timedelta
 import pandas as pd 
 phi_sol = 1 - phi_i_sol
 df = pd.read_excel('./Samira-data/TDRA_MaytoSept2016.xlsx',header=(1))
-Samira_dates = df['Time']
-Samira_dates_index = np.where((Samira_dates>=dates[850]) & (Samira_dates<=dates[len(dates)-1]))
 
-red_array  = np.array([[255,0,0], [255,43,43], [255,85,85], [255,128,128] , [255,170,170], [255,213,213]])/255;
-black_array= np.array([[0,0,0], [43,43,43], [85,85,85], [128,128,128] , [170,170,170], [213,213,213]])/255; 
-blue_array = np.array([[0,0,255], [43,43,255], [85,85,255], [128,128,255] , [170,170,255], [213,213,255]])/255;
+
+#red_array  = np.array([[255,0,0], [255,43,43], [255,85,85], [255,128,128] , [255,170,170], [255,213,213]])/255;
+#black_array= np.array([[0,0,0], [43,43,43], [85,85,85], [128,128,128] , [170,170,170], [213,213,213]])/255; 
+#blue_array = np.array([[0,0,255], [43,43,255], [85,85,255], [128,128,255] , [170,170,255], [213,213,255]])/255;
+
+red_array  = np.array([[255,0,0], [255,106.5,106.5] , [255,106.5,106.5] , [255,106.5,106.5] , [255,106.5,106.5], [255,213,213]])/255;
+black_array= np.array([[0,0,0], [106.5,106.5,106.5], [106.5,106.5,106.5], [106.5,106.5,106.5] , [106.5,106.5,106.5], [213,213,213]])/255; 
+blue_array = np.array([[0,0,255], [106.5,106.5,255], [106.5,106.5,255], [106.5,106.5,255] , [106.5,106.5,255], [213,213,255]])/255;
 
 data  = pd.read_csv('/Users/afzal-admin/Documents/Research/meltwater-percolation/Infiltration/JPL/Samira-data/Achilig_upGPR_data.csv')
 dates = data['date'].apply(lambda x: datetime.strptime(x, "'%d-%b-%Y %H:%M:%S.%f'")) 
 samira_heilig_time_days =np.array([(dates[i] - dates[850]).total_seconds() for i in range(850,4200)])/day2s   #time in days May 24 through September 18, 2016
+Samira_dates = df['Time']
+Samira_dates_index = np.where((Samira_dates>=dates[850]) & (Samira_dates<=dates[len(dates)-1]))
 
 # format the string in the given format : day/month/year 
 # hours/minutes/seconds-micro seconds
@@ -476,7 +486,7 @@ samira_heilig_time_days =np.array([(dates[i] - dates[850]).total_seconds() for i
 
 from matplotlib import rcParams
 rcParams.update({'font.size': 22})
-Grid.ymax = 2.6
+Grid.ymax = 3
 fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5,1, sharex=True,figsize=(15,15),dpi=50)
 #Neww plot sidebysidesnapshot
 phi_w_sol_backup = phi_w_sol.copy()
@@ -517,7 +527,7 @@ plt.ylim([1.1*np.min(Qnet_func(fit_time)),1.1*np.max(Qnet_func(fit_time))])
 plt.ylabel(r'Q$_{net}$ [W/m$^2$]',color='red')
 mm = plt.cm.ScalarMappable(cmap=cm.Greys)
 clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
-
+plt.yticks([0,25,50,75])
 import matplotlib.dates as mdates
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
 plt.xticks(rotation = 45) # Rotates X-Axis Ticks by 45-degrees
@@ -532,7 +542,7 @@ ax1new.spines['right'].set_color('blue')
 ax1new.set_ylabel(r'$a$ [mm.w.e./day]', color='blue')  # we already handled the x-label with ax1
 ax1new.plot(([dates[850] + timedelta(days = i) for i in day]), RetMIP_acc_rate(day)*1e3*day2s , color='blue')
 ax1new.tick_params(axis='y', colors='blue')
-
+plt.yticks([0,10,20])
 
 plt.subplot(5,1,2)
 plot = [plt.contourf(t_dates, depth_array, (1-phi_i_array),cmap="Greys",levels=100,ls=None)]
@@ -550,15 +560,17 @@ ax2.xaxis.grid(True, which='major', color='k', linestyle='--')
 
 plt.subplot(5,1,4)
 plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.1'])[Samira_dates_index[0]],'-',label='0.3 m',color = black_array[0,:])
-plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.2'])[Samira_dates_index[0]],'-',label='0.6 m',color = black_array[1,:])
+#plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.2'])[Samira_dates_index[0]],'-',label='0.6 m',color = black_array[1,:])
 plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.3'])[Samira_dates_index[0]],'-',label='0.9 m',color = black_array[2,:])
-plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.4'])[Samira_dates_index[0]],'-',label='1.4 m',color = black_array[3,:])
-plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.5'])[Samira_dates_index[0]],'-',label='1.8 m',color = black_array[4,:])
+#plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.4'])[Samira_dates_index[0]],'-',label='1.4 m',color = black_array[3,:])
+#plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.5'])[Samira_dates_index[0]],'-',label='1.8 m',color = black_array[4,:])
 plt.plot(Samira_dates[Samira_dates_index[0]],(df['degC.6'])[Samira_dates_index[0]],'-',label='2.1 m',color = black_array[5,:])
 
 Samira_siteA_depth_array = np.array([0.3, 0.6, 0.9, 1.4, 1.8, 2.1])
+Samira_siteA_depth_array_iter = np.array([0.3, 0.9, 2.1])
 alpha_array = np.array([1.0, 0.75,0.6,0.4,0.2,0.1])
-for i in Samira_siteA_depth_array:   
+for i in Samira_siteA_depth_array_iter:   
+    print(i)
     index = np.where(Yc_col<i)[0][-1]
     plt.plot(t_dates[0,:],(T_sol[index,:]+T_sol[index+1,:])/2-273.16,'r-',color=red_array[np.argwhere(i==Samira_siteA_depth_array)][0,0])
 #plt.legend(fontsize='medium', ncol=2)
@@ -591,7 +603,7 @@ ax3.xaxis.grid(True, which='major', color='k', linestyle='--')
 T_array = T_sol[int(Grid.Nx*Grid.Ny/2+0):int(Grid.Nx*Grid.Ny/2+Grid.Ny),:]
 T_array[T_array>Tm] = Tm
 T_array[T_array<Tm-22] = Tm-22
-phi_w_array[phi_w_array>0.06] = 0.06
+#phi_w_array[phi_w_array>0.06] = 0.06
 phi_w_array[T_array < Tm] = np.nan
 new2 = ax3.contourf(t_dates, depth_array, phi_w_array,cmap="Blues",levels=100,ls=None)
 
@@ -606,19 +618,21 @@ data_LWC  = pd.read_csv('/Users/afzal-admin/Documents/Research/meltwater-percola
 
 data_LWC[np.isnan(data_LWC)] = -10
 
-plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['0.3m']]),data_LWC['0.3m.1']-data_LWC['0.3m.1'][0],'ko',label='0.3 m',  color = black_array[0,:], markersize=3)
-plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['0.6m']]),data_LWC['0.6m.1']-data_LWC['0.6m.1'][0],'ks',label='0.6 m',color = black_array[1,:], markersize=3)
-plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['0.9m']]),data_LWC['0.9m.1']-data_LWC['0.9m.1'][0],'kd',label='0.9 m',color = black_array[2,:], markersize=3)
-plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['1.4m']]),data_LWC['1.4m.1']-data_LWC['1.4m.1'][0],'k^',label='1.4 m',color = black_array[3,:], markersize=3)
-plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['1.8m']]),data_LWC['1.8m.1']-data_LWC['1.8m.1'][0],'k>',label='1.8 m',color = black_array[4,:], markersize=3)
-plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['2.1m']]),data_LWC['2.1m.1']-data_LWC['2.1m.1'][0],'k<',label='2.1 m',color = black_array[5,:], markersize=3)
+plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['0.3m']]),data_LWC['0.3m.1']-data_LWC['0.3m.1'][0],'ko',label='0.3 m',  color = black_array[0,:], markersize=4)
+#plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['0.6m']]),data_LWC['0.6m.1']-data_LWC['0.6m.1'][0],'ks',label='0.6 m',color = black_array[1,:], markersize=3)
+plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['0.9m']]),data_LWC['0.9m.1']-data_LWC['0.9m.1'][0],'kd',label='0.9 m',color = black_array[2,:], markersize=4)
+#plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['1.4m']]),data_LWC['1.4m.1']-data_LWC['1.4m.1'][0],'k^',label='1.4 m',color = black_array[3,:], markersize=3)
+#plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['1.8m']]),data_LWC['1.8m.1']-data_LWC['1.8m.1'][0],'k>',label='1.8 m',color = black_array[4,:], markersize=3)
+plt.plot(([dates[850] + timedelta(days = i-3.5) for i in data_LWC['2.1m']]),data_LWC['2.1m.1']-data_LWC['2.1m.1'][0],'k<',label='2.1 m',color = black_array[5,:], markersize=4)
 
 plt.ylabel(r'LWC')
 
 Samira_siteA_depth_array = np.array([0.3, 0.6, 0.9, 1.4, 1.8, 2.1])
 alpha_array = np.array([1.0, 0.75,0.6,0.4,0.2,0.1])
-for i in range(0,len(Samira_siteA_depth_array)):   
+for i in [0,2,5]:   
     index = np.where(Yc_col<Samira_siteA_depth_array[i])[0][-1]
+    print(index)
+    print(i)
     plt.plot(t_dates[0,:],(phi_w_sol[index,:]+phi_w_sol[index+1,:])/2,'-',color = blue_array[i,:])
 
 plt.ylim(0,0.0275)
@@ -775,3 +789,202 @@ ani = animation.FuncAnimation(fig, animate, frn, init_func=init, fargs=(T_sol[:,
 ani.save(f"../Figures/{simulation_name}_combined_with_seconds_new.mov", writer='ffmpeg', fps=30)
 
 '''
+
+
+#New plots
+
+fc = k0*k_w0*rho_w*grav/mu_w*phi_L**3 #Infiltration capacity (m/s)
+
+fig, ax1 = plt.subplots(1,1, sharex=True,figsize=(20,6),dpi=50)
+rcParams.update({'font.size': 22})
+Grid.ymax = 2.6
+
+Flux_array = fc*phi_w_sol**n*(1-phi_i_sol)**(m-n)/phi_L**3 #Flux evaluation
+Flux_array[phi_sol>1-non_porous_vol_frac*100] = np.nan
+
+plot = [plt.contourf(t_dates, depth_array, Flux_array[:200,:],cmap="Blues",levels=100,ls=None)]
+mm = plt.cm.ScalarMappable(cmap=cm.Blues)
+mm.set_array(np.linspace(np.min(Flux_array[~np.isnan(Flux_array)]),np.max(Flux_array[~np.isnan(Flux_array)]),10000))
+clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
+clb.set_label(r'$Flux$ [m/s]', labelpad=-100, y=0.5, rotation=90)
+plt.ylim([Grid.ymax,Grid.ymin])
+
+#yyyymmdd format
+chosen_dates = [20160529,20160623,20160718,20160812,20160906]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xticks(chosen_dates,rotation = 0) # Rotates X-Axis Ticks by 45-degrees
+
+chosen_dates = [20160524,20160918]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xlim(chosen_dates)
+
+plt.tight_layout(w_pad=0.5, h_pad=1.0)
+plt.subplots_adjust(wspace=0.0, hspace=0.0)
+plt.ylabel(r'z [m]')
+plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_only_Fluxes.pdf',bbox_inches='tight', dpi = 50)
+
+
+fig, ax1 = plt.subplots(1,1, sharex=True,figsize=(20,6),dpi=50)
+rcParams.update({'font.size': 22})
+Grid.ymax = 2.6
+
+Flux_array = fc*(1-phi_i_sol)**(m)/phi_L**3 #Flux evaluation
+Flux_array[phi_sol>1-non_porous_vol_frac*100] = np.nan
+
+plot = [plt.contourf(t_dates, depth_array, Flux_array[:200,:],cmap="Blues",levels=100,ls=None)]
+mm = plt.cm.ScalarMappable(cmap=cm.Blues)
+mm.set_array(np.linspace(np.min(Flux_array[~np.isnan(Flux_array)]),np.max(Flux_array[~np.isnan(Flux_array)]),10000))
+clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
+clb.set_label(r'$Flux$ [m/s]', labelpad=-150, y=0.5, rotation=90)
+plt.ylim([Grid.ymax,Grid.ymin])
+
+#yyyymmdd format
+chosen_dates = [20160529,20160623,20160718,20160812,20160906]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xticks(chosen_dates,rotation = 0) # Rotates X-Axis Ticks by 45-degrees
+
+chosen_dates = [20160524,20160918]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xlim(chosen_dates)
+
+plt.tight_layout(w_pad=0.5, h_pad=1.0)
+plt.subplots_adjust(wspace=0.0, hspace=0.0)
+plt.ylabel(r'z [m]')
+plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_only_Flux2saturate.pdf',bbox_inches='tight', dpi = 50)
+
+
+#Analytical plot Marc for 50% porosity
+fig, ax1 = plt.subplots(2,1, sharex=True,figsize=(6,12),dpi=100)
+rcParams.update({'font.size': 22})
+phi0 =0.5
+s_w_analy = np.linspace(0/phi0,0.5/phi0,1000)
+Flux_analy= fc*s_w_analy**n*(phi0)**(m)/phi_L**3 #Flux evaluation
+
+plt.subplot(2,1,1)
+plt.plot(s_w_analy,Flux_analy*1e5,'b-',color=blue,label='$s_{wr}=0$')
+
+s_w_analy1= np.linspace(0.07,0.5/phi0,1000)
+Flux_analy1= fc*(s_w_analy-0.07)**n*(phi0)**(m)/phi_L**3 #Flux evaluation
+plt.plot(s_w_analy1,Flux_analy*1e5,'k-',label='$s_{wr}=0.07$')
+plt.xlim([0,1])
+plt.ylim([-1e-6*1e5,np.max([Flux_analy*1e5,Flux_analy1*1e5])])
+plt.ylabel(r'Flux, $I \times 10^5$ [m/s]')
+plt.legend(loc='best')
+plt.plot(0.07,0,'k+',markersize=10)
+
+plt.axvline(0.5,ymin=0,ymax=2,color='black',linestyle='-.',alpha=0.5)
+plt.plot([0,0.5], [0,1.71], color=blue,linestyle="--")
+plt.plot([0,0.5], [0,1.43], color='black',linestyle="--")
+
+plt.subplot(2,1,2)
+plt.plot(s_w_analy,Flux_analy*1e5,'b-',color=blue,label='$s_{wr}=0$')
+
+s_w_analy1= np.linspace(0.07,0.5/phi0,1000)
+Flux_analy1= fc*(s_w_analy-0.07)**n*(phi0)**(m)/phi_L**3 #Flux evaluation
+plt.plot(s_w_analy1,Flux_analy*1e5,'k-',label='$s_{wr}=0.07$')
+plt.xlim([0,1])
+plt.ylim([-1e-6*1e5,np.max([Flux_analy*1e5,Flux_analy1*1e5])])
+plt.ylabel(r'Flux, $I \times 10^5$ [m/s]')
+
+plt.xlabel('Water saturation, $LWC/\phi$ [-]')
+plt.plot(0.07,0,'k+',markersize=10)
+plt.tight_layout(w_pad=0.5, h_pad=1.0)
+plt.subplots_adjust(wspace=0.0, hspace=0.0)
+
+plt.axhline(1.71,xmin=0,xmax=1,color='black',linestyle='-.',alpha=0.5)
+
+
+plt.plot([0,0.5], [0,1.71], color=blue,linestyle="--")
+plt.plot([0,0.532], [0,1.71], color='black',linestyle="--")
+plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_res_sat_comparison.pdf',bbox_inches='tight', dpi = 50)
+
+#Peclet number estimation for 50% porosity
+K_h = k0*k_w0*rho_w*grav/mu_w #Infiltration capacity (m/s)
+
+LWC = 0.03; Tfirn = -10; phi0 =0.5; t_pulse = 4*day2s
+K_bar = 2.22362*(rho_i/rho_w*(1-phi0))**1.885
+kk_bar = K_bar/(rho_i*cp_i*(1-phi0))
+v= (fc*LWC**n*(phi0)**(m-n)/phi_L**3 - 0)/(0.00573*(1-phi0)*(-Tfirn) + LWC - 0)
+grain_size= 2e-3 #grainsize 1mm or 2mm Humphrey et al. (2021)
+Pe_grain = v*grain_size/kk_bar
+Pe_cell =  v*Grid.dy/kk_bar
+Pe_cell_shock =  v*(v*4*day2s)/kk_bar
+
+
+#Peclet number wrong and rough comparison
+fig, ax1 = plt.subplots(1,1, sharex=True,figsize=(20,6),dpi=50)
+rcParams.update({'font.size': 22})
+Grid.ymax = 2.6
+
+speed_array = (fc*phi_w_sol**n*(1-phi_i_sol)**(m-n)/phi_L**3)/(phi_w_sol + 0.00573*phi_i_sol*(Tm-T_sol)) #Rough speed evaluation
+speed_array[phi_sol>0.8] = np.nan
+K_bar_array = 2.22362*(rho_i/rho_w*phi_i_sol)**1.885
+kk_bar_array = K_bar_array/(rho_i*cp_i*phi_i_sol)
+
+Pe_L_array = speed_array*Grid.dy/kk_bar_array
+Pe_grain_array = speed_array*grain_size/kk_bar_array
+
+plot = [plt.contourf(t_dates, depth_array, Pe_L_array[:200,:],cmap="Blues",levels=100,vmin=np.min(Pe_L_array[~np.isnan(Pe_L_array)]),vmax=np.max(Pe_L_array[~np.isnan(Pe_L_array)])/2,ls=None)]
+mm = plt.cm.ScalarMappable(cmap=cm.Blues)
+mm.set_array(np.linspace(np.min(Pe_L_array[~np.isnan(Pe_L_array)]),np.max(Pe_L_array[~np.isnan(Pe_L_array)])/2,10000))
+clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
+clb.set_label(r'$Pe_{cell}$', labelpad=-105, y=0.5, rotation=90)
+plt.ylim([Grid.ymax,Grid.ymin])
+
+#yyyymmdd format
+chosen_dates = [20160529,20160623,20160718,20160812,20160906]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xticks(chosen_dates,rotation = 0) # Rotates X-Axis Ticks by 45-degrees
+
+chosen_dates = [20160524,20160918]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xlim(chosen_dates)
+
+plt.tight_layout(w_pad=0.5, h_pad=1.0)
+plt.subplots_adjust(wspace=0.0, hspace=0.0)
+plt.ylabel(r'z [m]')
+plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_only_wrong_PeL.pdf',bbox_inches='tight', dpi = 50)
+
+
+fig, ax1 = plt.subplots(1,1, sharex=True,figsize=(20,6),dpi=50)
+rcParams.update({'font.size': 22})
+Grid.ymax = 2.6
+
+speed_array = (fc*phi_w_sol**n*(1-phi_i_sol)**(m-n)/phi_L**3)/(phi_w_sol + 0.00573*phi_i_sol*(Tm-T_sol)) #Rough speed evaluation
+speed_array[phi_sol>0.8] = np.nan
+K_bar_array = 2.22362*(rho_i/rho_w*phi_i_sol)**1.885
+kk_bar_array = K_bar_array/(rho_i*cp_i*phi_i_sol)
+
+Pe_L_array = speed_array*Grid.dy/kk_bar_array
+Pe_grain_array = speed_array*grain_size/kk_bar_array
+
+plot = [plt.contourf(t_dates, depth_array, Pe_grain_array[:200,:],cmap="Blues",levels=100,vmin=np.min(Pe_grain_array[~np.isnan(Pe_grain_array)]),vmax=np.max(Pe_grain_array[~np.isnan(Pe_grain_array)])/2,ls=None)]
+mm = plt.cm.ScalarMappable(cmap=cm.Blues)
+mm.set_array(np.linspace(np.min(Pe_grain_array[~np.isnan(Pe_grain_array)]),np.max(Pe_grain_array[~np.isnan(Pe_grain_array)])/2,10000))
+clb = plt.colorbar(mm, orientation='vertical',aspect=10,pad=0.05)
+clb.set_label(r'$Pe_{grain}$', labelpad=-150, y=0.5, rotation=90)
+plt.ylim([Grid.ymax,Grid.ymin])
+
+#yyyymmdd format
+chosen_dates = [20160529,20160623,20160718,20160812,20160906]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xticks(chosen_dates,rotation = 0) # Rotates X-Axis Ticks by 45-degrees
+
+chosen_dates = [20160524,20160918]
+chosen_dates = [datetime.strptime(str(int(dateee)),'%Y%m%d') for dateee in chosen_dates]
+
+plt.xlim(chosen_dates)
+
+plt.tight_layout(w_pad=0.5, h_pad=1.0)
+plt.subplots_adjust(wspace=0.0, hspace=0.0)
+plt.ylabel(r'z [m]')
+plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_only_wrong_Pegrain.pdf',bbox_inches='tight', dpi = 50)
+
+
