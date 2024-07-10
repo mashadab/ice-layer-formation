@@ -18,6 +18,17 @@ import pandas as pd
 from datetime import datetime
 from colliander_data_analysis import spun_up_profile_May2016_Colliander, Qnet_May2Sept2016_Samira
 
+#Colors
+brown  = [181/255 , 101/255, 29/255]
+red    = [190/255 , 30/255 , 45/255]    
+blue   = [ 30/255 ,144/255 , 255/255]
+green  = [  0/255 , 166/255 ,  81/255]
+orange = [247/255 , 148/255 ,  30/255]
+purple = [102/255 ,  45/255 , 145/255]
+brown  = [155/255 ,  118/255 ,  83/255]
+tan    = [199/255 , 178/255 , 153/255]
+gray   = [100/255 , 100/255 , 100/255]
+
 
 #Importing results from RetMIP paper, 2020
 RetMIP_init_rho = np.loadtxt('./Samira-data/RetMIP_Forcing_data_Dye2_16/RetMIP_initial_firn_density_Dye-2_16.tab',delimiter=';',skiprows=1)
@@ -150,45 +161,84 @@ Coll_fit_temp     = interp1d(Coll_depth[0:],Coll_temp[0:], kind='cubic', fill_va
 day,Coll_Qnet,Coll_Qnet_func             = Qnet_May2Sept2016_Samira()
 
 
+##############################################################################################################################
+#Rennermalm (2021)
+dR = np.loadtxt('./Rennermalm/Dye2_2016.csv',skiprows=1,delimiter=',')
+
 #Plotting 
 
-fig, (ax1, ax2) = plt.subplots(1,2, sharey=True,figsize=(12,10))
+fig, (ax1, ax2) = plt.subplots(1,2, sharey=True,figsize=(10,10))
 plt.subplot(1,2,1)
-plt.plot(Coll_porosity,Coll_depth,'kx',label=r'Colliander$^+$ (2022)',markersize=10, markerfacecolor = 'none')
-plt.plot(Coll_fit_porosity(Coll_fit_depth),Coll_fit_depth,'k--',markersize=10)
+#plt.plot(Coll_porosity,Coll_depth,'kx',label=r'Colliander$^+$ (2022)',markersize=10, markerfacecolor = 'none')
+#plt.plot(Coll_fit_porosity(Coll_fit_depth),Coll_fit_depth,'k--',markersize=10)
 plt.plot(RetMIP_init_phi,RetMIP_init_depth,'ro',label=r'Vandecrux$^+$ (2020)',markersize=10, markerfacecolor = 'none')
-plt.plot(RetMIP_fit_porosity(RetMIP_fit_depth),RetMIP_fit_depth,'r--',markersize=10)
+plt.plot(RetMIP_fit_porosity(RetMIP_fit_depth),RetMIP_fit_depth,'r--',markersize=10,color=red)
 plt.plot(Samira_SiteA_init_phi,Samira_SiteA_depth,'bs',label=r'Samimi$^+$ (2021) Site-A',markersize=10, markerfacecolor = 'none')
-plt.plot(Samira_SiteA_fit_porosity(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'b--',markersize=10)
+#plt.plot(Samira_SiteA_fit_porosity(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'b--',markersize=10)
 
 plt.plot(Samira_SiteB_init_phi,Samira_SiteB_depth,'gd',label=r'Samimi$^+$ (2021) Site-B',markersize=10, markerfacecolor = 'none')
-plt.plot(Samira_SiteB_fit_porosity(Samira_SiteB_fit_depth),Samira_SiteB_fit_depth,'g--',markersize=10)
-
+#plt.plot(Samira_SiteB_fit_porosity(Samira_SiteB_fit_depth),Samira_SiteB_fit_depth,'g--',markersize=10)
+plt.plot(1-dR[:,5]/917,(dR[:,0]+dR[:,1])/2,'g.',label=r'Rennermalm$^+$ (2022)',markersize=10)
 
 plt.xlabel(r'$\phi$')
 plt.ylabel(r'Depth [m]')
 #plt.ylim([20,0])
 plt.tight_layout()
-
+plt.legend(framealpha=0.5,loc=(1.04, 0))
 plt.subplot(1,2,2)
 plt.plot(Coll_temp,Coll_depth,'kx',label=r'Colliander$^+$ (2022)',markersize=10, markerfacecolor = 'none')
-plt.plot(Coll_fit_temp(Coll_fit_depth),Coll_fit_depth,'k--',markersize=10)
+#plt.plot(Coll_fit_temp(Coll_fit_depth),Coll_fit_depth,'k--',markersize=10)
 plt.plot(RetMIP_init_T[:,1],RetMIP_init_depth,'ro',label=r'Vandecrux$^+$ (2020)',markersize=10, markerfacecolor = 'none')
 plt.plot(RetMIP_fit_temp(RetMIP_fit_depth),RetMIP_fit_depth,'r--',markersize=10)
 plt.plot(Samira_SiteA_init_T,Samira_SiteA_depth,'bs',label=r'Samimi$^+$ (2021) Site-A',markersize=10, markerfacecolor = 'none')
-plt.plot(Samira_SiteA_fit_temp(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'b--',markersize=10)
+#plt.plot(Samira_SiteA_fit_temp(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'b--',markersize=10)
 
 plt.plot(Samira_SiteB_init_T,Samira_SiteB_depth,'gd',label=r'Samimi$^+$ (2021) Site-B',markersize=10, markerfacecolor = 'none')
-plt.plot(Samira_SiteB_fit_temp(Samira_SiteB_fit_depth),Samira_SiteB_fit_depth,'g--',markersize=10)
+#plt.plot(Samira_SiteB_fit_temp(Samira_SiteB_fit_depth),Samira_SiteB_fit_depth,'g--',markersize=10)
 
-plt.plot(Samira_data_Temp_actual,Samira_data_depth_actual,'c^',label=r'Samimi$^+$ (2021) Site-A D',markersize=10, markerfacecolor = 'none')
-plt.plot(Samira_data_actual_fit_temp(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'c--',markersize=10)
+#plt.plot(Samira_data_Temp_actual,Samira_data_depth_actual,'c^',label=r'Samimi$^+$ (2021) Site-A D',markersize=10, markerfacecolor = 'none')
+#plt.plot(Samira_data_actual_fit_temp(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'c--',markersize=10)
 
 plt.xlabel(r'Temperature $[\circ C]$')
 plt.ylim([5,0])
-plt.legend(loc='lower right')
 plt.tight_layout()
 plt.savefig(f'../Figures/Combined_analysis_porosity_Temp.pdf',bbox_inches='tight', dpi = 600)
+
+
+#Plotting 
+
+fig, (ax1) = plt.subplots(1,1, sharey=True,figsize=(10,10))
+plt.subplot(1,1,1)
+
+# Create a Rectangle patch
+import matplotlib.patches as patches
+rect = patches.Rectangle((0.05, 0), 0.1,5, linewidth=1, edgecolor='none', facecolor=gray,alpha=0.2)
+
+# Add the patch to the Axes
+ax1.add_patch(rect)
+
+#plt.plot(Coll_porosity,Coll_depth,'kx',label=r'Colliander$^+$ (2022)',markersize=10, markerfacecolor = 'none')
+#plt.plot(Coll_fit_porosity(Coll_fit_depth),Coll_fit_depth,'k--',markersize=10)
+plt.plot(RetMIP_init_phi,RetMIP_init_depth,'ro',label=r'Vandecrux$^+$ (2020)',markersize=10, markerfacecolor = 'none',color=red)
+plt.plot(RetMIP_fit_porosity(RetMIP_fit_depth),RetMIP_fit_depth,'r--',markersize=10,color=red,label=r'Present (Fit)')
+plt.plot(Samira_SiteA_init_phi,Samira_SiteA_depth,'bs',label=r'Samimi$^+$ (2021) Site-A',markersize=10, markerfacecolor = 'none',color=blue)
+#plt.plot(Samira_SiteA_fit_porosity(Samira_SiteA_fit_depth),Samira_SiteA_fit_depth,'b--',markersize=10)
+
+plt.plot(Samira_SiteB_init_phi,Samira_SiteB_depth,'gd',label=r'Samimi$^+$ (2021) Site-B',markersize=10, markerfacecolor = 'none',color=green)
+#plt.plot(Samira_SiteB_fit_porosity(Samira_SiteB_fit_depth),Samira_SiteB_fit_depth,'g--',markersize=10)
+plt.plot(1-dR[:,5]/917,(dR[:,0]+dR[:,1])/2,'g.',label=r'Rennermalm$^+$ (2022)',markersize=10,color=green)
+#plt.axvline(0.05, ymin=0, ymax=5,alpha=0.2)
+
+plt.xlabel(r'$\phi$')
+plt.ylabel(r'Depth [m]')
+#plt.ylim([20,0])
+plt.tight_layout()
+plt.legend(framealpha=0.5,loc=(1.04, 0))
+plt.xlabel(r'Porosity $[-]$')
+plt.ylim([5,0])
+plt.xlim([0,0.75])
+plt.tight_layout()
+plt.savefig(f'../Figures/Combined_analysis_porosity.pdf',bbox_inches='tight', dpi = 600)
 
 
 fig = plt.figure(figsize=(15,7.5) , dpi=100)
