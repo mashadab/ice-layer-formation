@@ -663,6 +663,8 @@ plt.savefig(f'../Figures/{simulation_name}_{Grid.Nx}by{Grid.Ny}_rhow{rho_w}_LWC_
 
 
 '''
+from matplotlib.patches import Rectangle
+phi_w_sol_backup = phi_w_sol.copy()
 ######################################################################
 #Making video
 ######################################################################
@@ -748,9 +750,32 @@ def init():
     line[4].set_data([], [])
     return line,
 
+# dist = 0
+
+# patch1 = ax1.add_patch(Rectangle((0, 0), 1,dist,
+#                                  edgecolor = blue,
+#                                  facecolor = blue,
+#                                  fill=True,
+#                                  lw=3))
+# patch2 = ax2.add_patch(Rectangle((0, 0), 1,dist,
+#                                  edgecolor = blue,
+#                                  facecolor = blue,
+#                                  fill=True,
+#                                  lw=3))
+# patch3 = ax3.add_patch(Rectangle((-30, 0), 30,dist,
+#                                  edgecolor = blue,
+#                                  facecolor = blue,
+#                                  fill=True,
+#                                  lw=3))
+
 # animation function.  This is called sequentially
 def animate(i,u_sol,Sw_sol,phi_w_sol,phi_i_sol,Yc,Yf,time,t_dates):
-    
+    #patch1.remove()
+    #patch2.remove()
+    #patch3.remove()
+     # ax1.cla()
+     # ax2.cla()
+     # ax3.cla()    
     x = Yc[:,1] 
     y = np.transpose(u_sol[:,i].reshape(Grid.Nx,Grid.Ny))[:,1]-273.16    
     z = np.transpose(phi_w_sol[:,i].reshape(Grid.Nx,Grid.Ny))[:,1] 
@@ -762,14 +787,83 @@ def animate(i,u_sol,Sw_sol,phi_w_sol,phi_i_sol,Yc,Yf,time,t_dates):
     line[2].set_data(Tmelt, x)
     line[3].set_data(y, x)
     line[4].set_data( zz0, x)
-    if np.any(np.isnan(phi_w_sol[:,i])): 
-        ax1.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
-        ax2.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
-        ax3.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
+    if np.any(np.isnan(phi_w_sol[:,i])):
+        
+        #ax1.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
+        #ax2.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
+        #ax3.axhline(y=np.max(Yc_col[np.isnan(phi_w_sol[:,i])]), c=blue,linestyle='-',lw=3)
+        #add rectangle to plot
+        dist = np.max(Yc_col[np.isnan(phi_w_sol[:,i])])
+        
+        
+        ax1.add_patch(Rectangle((0, .25), 1, .50,
+                              edgecolor=(1, 1, 1, 1),
+                              facecolor=(1, 1, 1, 1),
+                              linewidth=2))
+
+        ax2.add_patch(Rectangle((0, .25), 0.1, .50,
+                              edgecolor=(1, 1, 1, 1),
+                              facecolor=(1, 1, 1, 1),
+                              linewidth=2))
+        
+        ax3.add_patch(Rectangle((-30, .25), 30, .50,
+                              edgecolor=(1, 1, 1, 1),
+                              facecolor=(1, 1, 1, 1),
+                              linewidth=2))
+ 
+        # ax1.add_patch(Rectangle((0, 0), 1,dist,
+        #                       edgecolor=(1, 1, 1, 1),
+        #                       facecolor=(1, 1, 1, 1),
+        #                       linewidth=2))
+        
+        # ax2.add_patch(Rectangle((0, 0), 1,dist,
+        #                       edgecolor=(1, 1, 1, 1),
+        #                       facecolor=(1, 1, 1, 1),
+        #                       linewidth=2))
+        
+        # ax3.add_patch(Rectangle((-30, 0), 30,dist,
+        #                       edgecolor=(1, 1, 1, 1),
+        #                       facecolor=(1, 1, 1, 1),
+        #                       linewidth=2))
+        
+        
+        
+        patch1 = ax1.add_patch(Rectangle((0, 0), 1,dist,
+                                         edgecolor = blue,
+                                         facecolor = blue,
+                                         fill=True,
+                                         lw=3))
+        patch2 = ax2.add_patch(Rectangle((0, 0), 1,dist,
+                                         edgecolor = blue,
+                                         facecolor = blue,
+                                         fill=True,
+                                         lw=3))
+        patch3 = ax3.add_patch(Rectangle((-30, 0), 30,dist,
+                                         edgecolor = blue,
+                                         facecolor = blue,
+                                         fill=True,
+                                         lw=3))
     else:
-        ax1.axhline(y=0, c=blue,linestyle='-',lw=3) 
-        ax2.axhline(y=0, c=blue,linestyle='-',lw=3)
-        ax3.axhline(y=0, c=blue,linestyle='-',lw=3)
+        ax1.axhline(y=0, c='white',linestyle='-',lw=3) 
+        ax2.axhline(y=0, c='white',linestyle='-',lw=3)
+        ax3.axhline(y=0, c='white',linestyle='-',lw=3)
+        dist = 0
+        patch1 = ax1.add_patch(Rectangle((0, 0), 1,dist,
+                                         edgecolor = blue,
+                                         facecolor = blue,
+                                         fill=True,
+                                         lw=3))
+        patch2 = ax2.add_patch(Rectangle((0, 0), 1,dist,
+                                         edgecolor = blue,
+                                         facecolor = blue,
+                                         fill=True,
+                                         lw=3))
+        patch3 = ax3.add_patch(Rectangle((0, 0), 1,dist,
+                                         edgecolor = blue,
+                                         facecolor = blue,
+                                         fill=True,
+                                         lw=3))
+        
     #plt.tight_layout()
     
     
